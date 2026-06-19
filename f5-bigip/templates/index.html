@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>BIG-IP 配置查询</title>
+    <style>
+        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; max-width: 1200px; margin: 0 auto; padding: 20px; background: #f5f5f5; }
+        h1 { color: #333; text-align: center; margin-bottom: 30px; }
+        .container { background: white; border-radius: 12px; padding: 30px; box-shadow: 0 2px 12px rgba(0,0,0,0.1); }
+        .chat-input { display: flex; gap: 12px; margin-bottom: 20px; }
+        .chat-input input { flex: 1; padding: 12px 16px; border: 2px solid #e0e0e0; border-radius: 8px; font-size: 14px; outline: none; transition: border-color 0.2s; }
+        .chat-input input:focus { border-color: #007bff; }
+        .chat-input button { padding: 12px 24px; border: none; border-radius: 8px; font-size: 14px; cursor: pointer; background: #007bff; color: white; transition: all 0.2s; }
+        .chat-input button:hover { background: #0056b3; }
+        .chat-input button:active { transform: scale(0.98); }
+        .tags { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 20px; }
+        .tag { padding: 6px 12px; background: #e8f0fe; color: #007bff; border-radius: 20px; font-size: 13px; cursor: pointer; transition: all 0.2s; }
+        .tag:hover { background: #d0e7ff; }
+        .result { background: #f8f9fa; border-radius: 8px; padding: 20px; font-family: monospace; white-space: pre-wrap; word-break: break-all; font-size: 13px; color: #333; min-height: 200px; max-height: 500px; overflow-y: auto; }
+        .loading { color: #666; font-style: italic; }
+        .error { color: #dc3545; }
+        .query-type { color: #007bff; font-weight: bold; margin-bottom: 10px; }
+        .divider { border-bottom: 1px solid #e0e0e0; margin: 20px 0; }
+    </style>
+</head>
+<body>
+    <h1>BIG-IP 配置查询</h1>
+    <div class="container">
+        <div class="chat-input">
+            <input type="text" id="queryInput" placeholder="输入自然语言查询，例如：查询所有 Virtual Server 的配置..." />
+            <button onclick="submitQuery()">查询</button>
+        </div>
+        
+        <div class="tags">
+            <span class="tag" onclick="quickFill('查询所有 Virtual Server 的配置')">Virtual Server</span>
+            <span class="tag" onclick="quickFill('查询所有 Pool 的信息')">Pool</span>
+            <span class="tag" onclick="quickFill('查询所有 SNAT Pool')">SNAT Pool</span>
+            <span class="tag" onclick="quickFill('查询所有 Profile 配置')">Profile</span>
+            <span class="tag" onclick="quickFill('查询所有 BIG-IP 配置信息')">全部配置</span>
+        </div>
+        
+        <div class="divider"></div>
+        
+        <div id="result" class="result">输入查询内容或点击标签快速查询...</div>
+    </div>
+
+    <script>
+        function quickFill(text) {
+            document.getElementById('queryInput').value = text;
+            submitQuery();
+        }
+
+        async function submitQuery() {
+            const input = document.getElementById('queryInput');
+            const resultDiv = document.getElementById('result');
+            const query = input.value.trim();
+            
+            if (!query) {
+                resultDiv.innerHTML = '<span class="error">请输入查询内容</span>';
+                return;
+            }
+            
+            resultDiv.innerHTML = '<span class="loading">LLM 分析中，请稍候...</span>';
+            
+            try {
+                const response = await fetch('/agent_query', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                    body: `query=${encodeURIComponent(query)}`
+                });
+                
+                if (!response.ok) throw new Error('请求失败');
+                
+                const data = await response.json();
+                
+                if (data.error) {
+                    resultDiv.innerHTML = `<span class="error">错误: ${data.error}</span>`;
+                } else {
+                    resultDiv.innerHTML = `<div class="query-type">识别类型: ${data.query_type}</div>${data.final_answer}`;
+                }
+            } catch (error) {
+                resultDiv.innerHTML = `<span class="error">查询失败: ${error.message}</span>`;
+            }
+        }
+
+        document.getElementById('queryInput').addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                submitQuery();
+            }
+        });
+    </script>
+</body>
+</html>
