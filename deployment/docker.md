@@ -4,7 +4,7 @@
 
 本文件已将原有的 Docker 安装脚本、镜像加速配置示例与说明文档整合为一个统一文档，便于直接阅读和分享。
 
-## 1. 安装脚本内容
+## 1. Ubuntu安装脚本内容
 
 文件来源：docker_install.sh
 
@@ -79,28 +79,4 @@ docker info | grep "Registry Mirrors"
 }
 ```
 
-## 3. 使用说明
-
-### Linux / Ubuntu
-
-在终端中执行：
-
-```bash
-bash docker_install.sh
-```
-
-### Windows
-
-将配置内容保存为：
-
-```text
-C:\Users\<你的用户名>\.docker\daemon.json
-```
-
-然后重启 Docker Desktop。
-
-## 4. 注意事项
-
-- 建议在安装前备份系统配置。
-- 国内网络环境下使用镜像源可提升拉取镜像速度。
-- 若服务启动失败，建议检查系统日志与网络连接。
+ 

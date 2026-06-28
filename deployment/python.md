@@ -43,8 +43,4 @@ uv pip install pyrit deepeval garak adversarial-robustness-toolbox counterfit tr
 ```bash
 uv pip install giskard
 ```
-
-## 7. 注意事项
-
-- 建议先确认系统已安装可用的 Python 版本。
-- 若遇到依赖冲突，可优先检查当前解释器版本与环境配置。
+ 
