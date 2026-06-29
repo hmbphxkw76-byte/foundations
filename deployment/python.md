@@ -8,6 +8,7 @@
 
 ```powershell
 Set-ExecutionPolicy RemoteSigned
+
 ```
 
 ## 2. 初始化 Python 项目环境
