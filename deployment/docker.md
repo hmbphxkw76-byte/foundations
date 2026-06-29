@@ -69,14 +69,20 @@ docker info | grep "Registry Mirrors"
 
 ```json
 {
+  "builder": {
+    "gc": {
+      "defaultKeepStorage": "20GB",
+      "enabled": true
+    }
+  },
+  "experimental": false,
   "registry-mirrors": [
     "https://docker.xuanyuan.me",
     "https://docker.1ms.run",
     "https://docker.m.daocloud.io"
-  ],
-  "builder.gc.defaultKeepStorage": 20,
-  "experimental": false
+  ]
 }
+
 ```
 
  
