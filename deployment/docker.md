@@ -85,4 +85,38 @@ docker info | grep "Registry Mirrors"
 
 ```
 
- 
+## 3. Docker 空间清理命令
+
+以下命令可用于清理 Docker 的磁盘占用，适合在本地环境中定期维护：
+
+```bash
+# 1. 查看当前 Docker 空间占用
+docker system df
+
+# 2. 清理悬空镜像
+docker image prune -f
+
+# 3. 清理已停止的容器
+docker rm $(docker ps -aq -f status=exited) 2>/dev/null || true
+
+# 4. 清理未使用的卷（注意：卷中可能包含重要数据，请确认不再需要）
+docker volume prune -f
+
+# 5. 清理构建缓存
+docker builder prune -f
+
+# 6. 再次查看清理后的空间占用
+docker system df
+```
+
+> 说明：第 4 步会清理未使用的 Docker 卷，若卷中存放了重要数据，请先确认后再执行。
+
+### 终极清理（慎用）
+
+如果你想一次性清理 Docker 中几乎所有未使用的数据，包括停止的容器、悬空镜像、未使用的网络和构建缓存，可以执行：
+
+```bash
+docker system prune -a
+```
+
+> 说明：这个命令会删除大量不再使用的 Docker 数据，执行前请确认当前环境中没有需要保留的容器、镜像或缓存。 
