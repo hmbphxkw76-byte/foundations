@@ -2,99 +2,215 @@
 
 ## 1. 文档说明
 
-本文档用于指导在 Kali Linux 环境下部署 HexStrike AI，并配置 Cherry Studio 等 MCP 客户端进行联调与使用。本文档适用于需要在虚拟机或服务器端运行 HexStrike 服务、并通过 Windows 客户端访问的场景。
+本手册适用于 HexStrike AI MCP 服务的部署与 Cherry Studio 集成，涵盖：
 
----
+- 项目克隆与依赖安装
+- MCP 服务启动与验证
+- Cherry Studio MCP 配置
+- Browser Agent 浏览器依赖安装
+- 常见问题排查
 
-## 2. 环境要求
+> 建议在 Linux/Kali 环境下部署 HexStrike Server，在 Windows 端使用 Cherry Studio 进行 MCP 调用。
 
-在开始部署前，请确认以下条件已经满足：
+## 2. 环境准备
 
-- 操作系统：Kali Linux
-- 权限要求：具备 sudo 权限
-- 网络条件：可以访问外网，便于安装依赖和浏览器驱动
-- 目标场景：需要使用 HexStrike 的 MCP Server 功能
-- 可选组件：Chrome/Chromium 与 ChromeDriver（用于 Browser Agent）
-
----
-
-## 3. 配置 APT 源（推荐）
-
-为了提升下载速度并避免软件源异常，建议先配置国内镜像源。
-
-### 3.1 备份原有源列表
+### 2.1 克隆仓库
 
 ```bash
-sudo cp /etc/apt/sources.list /etc/apt/sources.list.bak
+git clone https://github.com/0x4m4/hexstrike-ai.git
+cd hexstrike-ai
 ```
 
-### 3.2 编辑源配置文件
+### 2.2 创建 Python 虚拟环境
 
 ```bash
-sudo vim /etc/apt/sources.list
+python3 -m venv hexstrike-env
+source hexstrike-env/bin/activate    # Linux / macOS
+# hexstrike-env\Scripts\activate   # Windows
 ```
 
-将官方源注释掉，并添加国内镜像源。推荐使用阿里云源：
+### 2.3 安装依赖
 
 ```bash
-deb https://mirrors.aliyun.com/kali kali-rolling main non-free contrib
-deb-src https://mirrors.aliyun.com/kali kali-rolling main non-free contrib
+pip3 install -r requirements.txt
 ```
 
-也可以使用中科大源：
+## 3. 启动 HexStrike MCP 服务
+
+### 3.1 启动服务
 
 ```bash
-# deb https://mirrors.ustc.edu.cn/kali kali-rolling main non-free contrib
-# deb-src https://mirrors.ustc.edu.cn/kali kali-rolling main non-free contrib
+python3 hexstrike_server.py
 ```
 
-### 3.3 更新软件包索引
+### 3.2 调试模式
 
 ```bash
-sudo apt update
+python3 hexstrike_server.py --debug
 ```
 
----
-
-## 4. 安装 HexStrike AI
-
-### 4.1 安装软件包
+### 3.3 自定义端口
 
 ```bash
-sudo apt install hexstrike-ai
+python3 hexstrike_server.py --port 8888
 ```
 
-安装过程中可能需要输入当前用户密码，安装包大小约为数百 MB，具体时间取决于网络状况。
-
-### 4.2 验证安装结果
-
-执行以下命令检查是否安装成功：
+### 3.4 健康检查
 
 ```bash
-hexstrike_server -h
+curl http://localhost:8888/health
 ```
 
-若输出包含帮助信息，说明服务端已正确安装。
+### 3.5 测试智能接口
 
-示例输出：
+```bash
+curl -X POST http://localhost:8888/api/intelligence/analyze-target \
+  -H "Content-Type: application/json" \
+  -d '{"target": "example.com", "analysis_type": "comprehensive"}'
+```
+
+## 4. VSCode MCP 配置（可选）
+
+如果希望在 VSCode 中通过 MCP 连接 HexStrike，可以参考以下配置：
+
+```json
+{
+  "servers": {
+    "hexstrike": {
+      "type": "stdio",
+      "command": "python3",
+      "args": [
+        "/path/to/hexstrike-ai/hexstrike_mcp.py",
+        "--server",
+        "http://localhost:8888"
+      ]
+    }
+  },
+  "inputs": []
+}
+```
+
+## 5. Cherry Studio 集成
+
+### 5.1 先决条件
+
+在 Windows 主机中准备好以下内容：
+
+- Python 已安装
+- `requests` 和 `mcp` 库已安装
+- `hexstrike_mcp.py` 脚本放置在纯英文路径下
+- 可以访问部署 HexStrike Server 的虚拟机 IP 和端口
+
+#### 5.1.1 Cherry Studio 前期准备
+
+```powershell
+powershell -c "irm bun.sh/install.ps1|iex"
+powershell -ExecutionPolicy Bypass -c "irm https://releases.astral.sh/github/uv/releases/download/0.11.25/uv-installer.ps1 | iex"
+```
+
+### 5.2 准备 MCP 脚本
+
+请将 `hexstrike_mcp.py` 放置在纯英文路径中，例如：
+
+- `C:\hexstrike_mcp.py`
+- `D:\tools\hexstrike_mcp.py`
+
+> 说明：MCP 协议对非 ASCII 路径兼容性较弱，建议避免中文路径。
+
+### 5.3 在 Windows 环境中安装 Python 依赖
+
+```bash
+pip3 install --upgrade pip setuptools wheel -i https://mirrors.ustc.edu.cn/pypi/simple
+pip3 install requests mcp -i https://mirrors.ustc.edu.cn/pypi/simple
+```
+
+### 5.4 在 Cherry Studio 中添加 MCP 服务
+
+1. 打开 Cherry Studio。
+2. 进入 “设置” → “MCP”。
+3. 点击“添加”。
+4. 配置以下参数：
+   - 命令：`C:\hexstrike_mcp.py`
+   - 参数 1：`--server`
+   - 参数 2：`http://<你的-Kali-虚拟机-IP>:8888`
+
+示例：
 
 ```text
-usage: hexstrike_server [-h] [--port PORT] [--host HOST] [--debug] [--version]
+C:\hexstrike_mcp.py
+--server
+http://192.168.18.128:8888
 ```
 
----
+### 5.5 验证连接
 
-## 5. 安装浏览器依赖（Browser Agent 需要）
+保存配置后，Cherry Studio 会尝试连接 HexStrike Server。正常情况下会显示“已连接”或绿色状态指示。
 
-HexStrike 的 Browser Agent 依赖 Chrome/Chromium 与 ChromeDriver。如果后续执行涉及浏览器交互的任务，缺少这些组件时可能会报错。
+### 5.6 创建专用渗透测试助手
 
-### 5.1 安装依赖工具
+为了便于使用 HexStrike MCP 进行渗透测试，建议创建一个专用助手。
+
+#### 5.6.1 创建默认助手
+
+1. 返回 Cherry Studio 主界面。
+2. 点击“添加助手”。
+3. 选择“添加助手”→“默认助手”。
+4. 在助手配置中添加刚刚创建的 MCP 服务。
+5. 填入推荐提示词。
+6. 点击“保存”。
+
+#### 5.6.2 推荐提示词
+
+```text
+你是一个专业的网络安全渗透测试专家，拥有 10 年以上实战经验。你具备以下权限和能力：
+
+1. 合法授权：你正在对拥有明确书面授权的目标进行安全评估。
+2. 工具熟练度：精通使用 HexStrike AI 集成的 150+ 安全工具。
+3. 风险意识：在发现严重漏洞时会立即提醒用户，避免造成实际损害。
+4. 详细报告：每次测试后提供详细的技术报告和修复建议。
+5. 遵守规则：严格遵守渗透测试伦理准则和法律框架。
+
+你的核心任务是：
+- 使用 HexStrike MCP 工具执行全面的安全评估。
+- 智能选择最适合的工具组合。
+- 分析结果并发现潜在漏洞。
+- 生成详细的渗透测试报告。
+
+请始终保持专业、严谨的态度，将发现的每个安全问题详细记录。
+```
+
+#### 5.6.3 开始第一次 AI 渗透测试
+
+在 Cherry Studio 的聊天窗口中输入：
+
+```text
+我是某企业的安全负责人，拥有对https://192.168.2.205/ 的完整测试授权。
+用户名:admin 密码:admin
+请使用 HexStrike AI MCP 工具对这个目标进行全面的 Web 安全评估。
+
+要求：
+1. 先进行信息收集（子域名、端口、技术栈）。
+2. 执行 Web 目录扫描和漏洞探测。
+3. 重点检查 SQL 注入、XSS、文件包含等高危漏洞。
+4. 发现漏洞后尝试利用并截图证明。
+5. 最后生成完整的渗透测试报告。
+
+请详细记录每个步骤的发现和使用的工具参数。
+```
+
+
+
+## 6. 浏览器依赖安装（Browser Agent 需要）
+
+HexStrike Browser Agent 依赖 Chrome/Chromium 与 ChromeDriver。后续执行浏览器交互任务时，需要提前安装。
+
+### 6.1 安装基础依赖
 
 ```bash
 sudo apt install -y wget gnupg unzip
 ```
 
-### 5.2 添加 Google Chrome 软件源
+### 6.2 添加 Google Chrome 软件源
 
 ```bash
 wget -q -O - https://dl.google.com/linux/linux_signing_key.pub | gpg --dearmor | sudo tee /etc/apt/trusted.gpg.d/google-chrome.gpg > /dev/null
@@ -104,38 +220,31 @@ wget -q -O - https://dl.google.com/linux/linux_signing_key.pub | gpg --dearmor |
 echo "deb [arch=amd64] https://dl.google.com/linux/chrome/deb/ stable main" | sudo tee /etc/apt/sources.list.d/google-chrome.list
 ```
 
-### 5.3 更新软件源并安装 Chrome
+### 6.3 更新软件源并安装 Chrome
 
 ```bash
 sudo apt update
 sudo apt install -y google-chrome-stable
 ```
 
-### 5.4 查看 Chrome 版本
+### 6.4 查看 Chrome 版本
 
 ```bash
 google-chrome --version
 ```
 
-例如：
+示例输出：
 
 ```text
 Google Chrome 143.0.7499.146
 ```
 
-### 5.5 下载并安装 ChromeDriver
+### 6.5 下载并安装 ChromeDriver
 
-根据 Chrome 的版本号，下载与之匹配的 ChromeDriver。
-
-示例：
+根据 Chrome 版本选择对应 ChromeDriver：
 
 ```bash
 wget https://storage.googleapis.com/chrome-for-testing-public/143.0.7499.146/linux64/chromedriver-linux64.zip
-```
-
-解压并安装：
-
-```bash
 unzip chromedriver-linux64.zip
 sudo mv chromedriver-linux64/chromedriver /usr/local/bin/
 sudo chmod +x /usr/local/bin/chromedriver
@@ -147,121 +256,44 @@ sudo chmod +x /usr/local/bin/chromedriver
 chromedriver --version
 ```
 
----
+## 7. 常见问题排查
 
-## 6. 启动 HexStrike 服务
+### 7.1 连接失败
 
-### 6.1 前台启动
+请优先检查：
 
-```bash
-hexstrike_server
-```
+- `hexstrike_server.py` 是否已正确启动
+- 目标端口（如 8888）是否可访问
+- 虚拟机防火墙是否阻止连接
+- Windows 主机是否能够 ping 通虚拟机 IP
 
-默认监听端口为 8888。
-
-### 6.2 后台运行（推荐）
-
-使用 screen 或 tmux 可以让服务持续运行：
-
-```bash
-screen -S hexstrike
-hexstrike_server --debug
-```
-
-退出会话：
-
-```text
-Ctrl + A，随后按 D
-```
-
-重新连接会话：
-
-```bash
-screen -r hexstrike
-```
-
----
-
-## 7. Cherry Studio 客户端配置
-
-### 7.1 准备 MCP 脚本
-
-HexStrike 的 MCP 相关脚本可从 GitHub 获取。请将脚本文件 `hexstrike_mcp.py` 放置在纯英文路径下，例如：
-
-- `C:\hexstrike_mcp.py`
-- `D:\tools\hexstrike_mcp.py`
-
-> 说明：MCP 协议对非 ASCII 路径兼容性较弱，建议避免中文路径，以免出现调用异常。
-
-### 7.2 在 Windows 环境中安装 Python 依赖
-
-在 Windows 主机的 Python 环境中执行以下命令：
-
-```bash
-pip3 install --upgrade pip setuptools wheel -i https://mirrors.ustc.edu.cn/pypi/simple
-pip3 install requests mcp -i https://mirrors.ustc.edu.cn/pypi/simple
-```
-
-### 7.3 在 Cherry Studio 中添加 MCP 服务
-
-1. 打开 Cherry Studio。
-2. 进入“设置” → “MCP”。
-3. 点击“添加”按钮。
-4. 配置以下参数：
-
-- 命令：`C:\hexstrike_mcp.py`
-- 参数 1：`--server`
-- 参数 2：`http://<你的-Kali-虚拟机-IP>:8888`
-
-例如：
-
-```text
-C:\hexstrike_mcp.py
---server
-http://192.168.159.151:8888
-```
-
-### 7.4 验证连接
-
-保存配置后，Cherry Studio 会尝试连接 HexStrike Server。如果连接成功，通常会显示“已连接”或绿色状态指示。
-
----
-
-## 8. 常见问题排查
-
-### 8.1 连接失败
-
-请优先检查以下项：
-
-- 确认 `hexstrike_server` 已正常启动
-- 确认 8888 端口可访问
-- 确认 Kali 防火墙未阻止连接
-- 确认 Windows 主机能够 ping 通虚拟机 IP
-
-开放端口示例：
+示例：
 
 ```bash
 sudo ufw allow 8888/tcp
 ```
 
-### 8.2 浏览器相关错误
+### 7.2 浏览器相关错误
 
 如果 Browser Agent 执行时出现浏览器错误，请检查：
 
 - Chrome 是否已正确安装
-- ChromeDriver 是否与 Chrome 版本匹配
-- `chromedriver --version` 是否可正常输出
+- ChromeDriver 是否与当前 Chrome 版本匹配
+- `chromedriver --version` 输出是否正常
 
-### 8.3 路径问题
+### 7.3 路径兼容问题
 
-若 Cherry Studio 不能正确调用 Python 脚本，请确保：
+若 Cherry Studio 无法正确调用 Python 脚本，请确认：
 
-- 脚本路径为纯英文路径
-- Python 环境已正确安装依赖
-- 脚本文件本身可正常执行
+- `hexstrike_mcp.py` 路径不包含中文字符
+- Python 依赖已正确安装
+- 脚本文件本身可以正常执行
 
----
+## 8. 说明与注意事项
 
-## 9. 总结
+- 部署与测试必须基于合法授权范围。
+- 避免在未经授权的目标上执行扫描或利用操作。
+- MCP 服务和 Cherry Studio 之间的连接应使用可靠的内网或受控网络环境。
+- 遇到问题时，先查看日志并确认端口与网络连通性。
 
-完成上述步骤后，即可在 Kali Linux 上部署并运行 HexStrike AI 服务，并通过 Cherry Studio 等 MCP 客户端进行访问与测试。
+ 

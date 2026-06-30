@@ -61,6 +61,7 @@ sudo systemctl daemon-reload
 sudo systemctl restart docker
 
 docker info | grep "Registry Mirrors"
+
 ```
 
 ## 2. Windows Docker Desktop 镜像加速配置
@@ -120,3 +121,36 @@ docker system prune -a
 ```
 
 > 说明：这个命令会删除大量不再使用的 Docker 数据，执行前请确认当前环境中没有需要保留的容器、镜像或缓存。 
+
+
+## 4. Kali Linux 安装 Docker 的补充配置
+
+如果你是在 Kali Linux 上安装 Docker，除了常规的 Docker 仓库配置外，还可以手动补充 apt 源配置。下面给出一个可直接使用的示例：
+
+```bash
+sudo install -m 0755 -d /etc/apt/keyrings
+
+curl -fsSL https://download.docker.com/linux/debian/gpg | sudo gpg --dearmor -o /etc/apt/keyrings/docker.gpg
+
+sudo chmod a+r /etc/apt/keyrings/docker.gpg
+```
+
+创建 Docker 源文件：
+
+```bash
+sudo tee /etc/apt/sources.list.d/docker.list <<'EOF'
+#deb [arch=amd64 signed-by=/etc/apt/keyrings/docker.gpg] https://download.docker.com/linux/debian kali-rolling stable
+
+deb [arch=amd64 signed-by=/etc/apt/keyrings/docker.gpg] https://download.docker.com/linux/debian bookworm stable
+EOF
+```
+
+然后执行：
+
+```bash
+sudo apt update
+
+sudo apt install docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin
+```
+
+> 说明：Kali 系统下，推荐优先使用 Debian 的 `bookworm` 源；若使用 `kali-rolling` 源，可能会遇到兼容性问题。
