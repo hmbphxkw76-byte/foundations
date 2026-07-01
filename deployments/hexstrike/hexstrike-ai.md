@@ -98,7 +98,7 @@ curl -X POST http://localhost:8888/api/intelligence/analyze-target \
 
 - Python 已安装
 - `requests` 和 `mcp` 库已安装
-- `hexstrike_mcp.py` 脚本放置在纯英文路径下
+- `hexstrike_mcp.py` 脚本放置在纯英文路径下#确认后文件名
 - 可以访问部署 HexStrike Server 的虚拟机 IP 和端口
 
 #### 5.1.1 Cherry Studio 前期准备

@@ -1,0 +1,46 @@
+#sudo nano /etc/systemd/system/hexstrike.service
+
+[Unit]
+Description=HexStrike MCP Server
+After=network.target
+
+[Service]
+# 设置工作目录为项目根目录
+WorkingDirectory=/root/hexstrike-ai
+
+# 【关键】直接使用虚拟环境内的 python3 解释器启动程序
+ExecStart=/root/hexstrike-ai/.hexstrike_mcp_server/bin/python3 hexstrike_server.py --port 8888
+
+# 静默运行，丢弃所有标准输出和错误日志
+StandardOutput=null
+StandardError=null
+
+# 崩溃后自动重启，延迟 5 秒
+Restart=always
+RestartSec=5
+
+# 以 root 账户身份运行
+User=root
+Group=root
+
+[Install]
+WantedBy=multi-user.target
+
+
+
+
+# 1. 重新加载 systemd 配置
+sudo systemctl daemon-reload
+
+# 2. 设置开机自启
+sudo systemctl enable hexstrike.service
+
+# 3. 立即启动服务
+sudo systemctl start hexstrike.service
+
+
+# 查看服务状态，若显示 active (running) 且为绿色即代表成功
+systemctl status hexstrike.service
+
+# 检查 8888 端口是否处于监听状态
+ss -tulnp | grep 8888
