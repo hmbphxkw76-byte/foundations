@@ -1,123 +1,133 @@
-# Node.js 与 npm 使用指南
+# Node.js / npm 使用与排查指南（中文）
 
-本指南汇总了 Node.js / npm 环境的常见配置与命令示例，并包含 Promptfoo 的安装与使用说明，适用于开发者快速上手与排错。
+本文档整理了 Node.js / npm 的常用安装、配置、镜像切换、缓存清理与常见问题排查方法，适用于本地开发和 CI 环境。
 
 ## 目录
 - 概览
 - 前置要求
-- 安装（npm / npx / Homebrew）
-- 验证安装
-- 快速初始化（Promptfoo）
-- 常见配置（nvm / 镜像源 / 缓存）
+- Node.js 与 nvm
+- npm 常用配置与镜像
 - 常见问题与排查
+- CI 集成建议
 - 参考链接
 
 ## 概览
 
-本文档包含：
-- Node.js 版本管理（使用 `nvm`）的推荐做法
-- 常用的 `npm` 镜像与缓存操作
-- Promptfoo 的安装与初始化示例（全局 / 项目 / npx）
+本文档包含：Node 版本管理建议、npm 镜像与缓存操作、常见安装与使用问题的定位与解决步骤。
 
 ## 前置要求
 
-- 已安装 Node.js（建议使用 `nvm` 管理多个版本）
+- 已安装 Git 与基本 shell（PowerShell / Bash）
+- 已安装 Node.js（建议使用 nvm 管理多个版本）
 - npm 可用且在 PATH 中
 
-## 安装（Promptfoo）
+## Node.js 与 nvm
 
-可以通过多种方式安装 Promptfoo：
-
-- 全局安装（适合在多处调用命令行工具的场景）：
-
-```bash
-npm install -g promptfoo
-```
-
-- 作为项目依赖（在项目中以库形式使用）：
-
-```bash
-npm install promptfoo --save
-```
-
-- 使用 npx（无需全局安装，适合临时执行或初始化）：
-
-```bash
-npx promptfoo@latest init
-```
-
-- macOS / Linux（如果可用，也可通过 Homebrew 安装）：
-
-```bash
-# (示例) brew install promptfoo
-```
-
-## 验证安装
-
-安装完成后，验证命令行工具是否可用：
-
-```bash
-promptfoo --version
-```
-
-如果能正确打印版本号，则安装成功。
-
-## 快速初始化（Promptfoo）
-
-在项目根目录运行初始化命令以创建配置和示例：
-
-```bash
-promptfoo init
-# 或（使用 npx 确保使用最新版）
- npx promptfoo@latest init
-```
-
-初始化后，按照生成的配置与示例使用 Promptfoo 进行提示测试与基准。
-
-## 常见配置
-
-### 使用 nvm 管理 Node.js
-
-推荐使用 `nvm` 来安装和切换 Node.js 版本：
+推荐使用 nvm 安装与切换 Node 版本：
 
 ```bash
 curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.40.3/install.sh | bash
-# 重新打开终端或 source ~/.nvm/nvm.sh，然后安装稳定版本：
+# 重启 shell 或运行 source ~/.nvm/nvm.sh
 nvm install stable
+nvm use stable
 ```
 
-### 配置 npm 镜像源（中国大陆用户）
+## npm 常用配置与镜像
 
-如果网络访问官方 registry 较慢，可以切换到镜像：
+- 切换 registry（中国大陆建议）：
 
 ```bash
 npm config set registry https://registry.npmmirror.com
 npm config get registry
 ```
 
-### 查看与清理缓存
+- 查看与清理缓存：
 
 ```bash
 npm config get cache
 npm cache clean --force
 ```
 
-## 常见问题与排查
+- 查看全局安装路径：
 
-- PATH 或权限问题：全局安装后若命令不可用，请确认 npm 全局目录在 `PATH` 中，或使用 `nvm`/`sudo`（慎用）重新安装。
-- 版本不兼容：若项目依赖特定 Node 版本，请使用 `nvm use <version>` 切换。
-- 初始化失败：尝试使用 `npx promptfoo@latest init` 以保证使用最新版的初始化脚本。
+```bash
+npm root -g
+```
+
+- 安装依赖：
+
+```bash
+npm install
+```
+
+- 仅安装生产依赖：
+
+```bash
+npm install --omit=dev
+```
+
+## 常见问题与排查步骤
+
+- 命令不可用：检查 Node.js 和 npm 是否已正确安装：
+
+```bash
+node --version
+npm --version
+```
+
+- 检查全局安装路径是否在 PATH 中（Windows）：
+
+```powershell
+where.exe npm
+```
+
+- registry 与网络问题：
+
+```bash
+npm config get registry
+npm ping
+```
+
+- 权限问题（Unix）：避免使用 sudo 安装全局包，推荐修复 npm 全局目录权限或使用 nvm。
+
+- 依赖安装失败：
+  - 清理缓存后重试：
+
+```bash
+npm cache clean --force
+npm install
+```
+
+  - 删除 node_modules 和 package-lock.json 后重装：
+
+```bash
+rm -rf node_modules package-lock.json
+npm install
+```
+
+## CI 集成建议
+
+- 在 CI 中使用 npm 安装依赖：
+
+```yaml
+name: Node.js CI
+on: [push, pull_request]
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 'lts/*'
+          cache: 'npm'
+      - name: Install dependencies
+        run: npm ci
+```
 
 ## 参考链接
 
-- Promptfoo 官方仓库 / 文档（请根据实际地址替换）
 - nvm: https://github.com/nvm-sh/nvm
-- npm registry 镜像: https://registry.npmmirror.com
-
-----
-
-如需，我可以：
-- 将 Promptfoo 的配置示例添加到仓库中（例如 `promptfoo.yml`）
-- 为常见问题添加更多排查命令和示例输出
-
-完成：整理并美化 `npm` / Promptfoo 相关文档。
+- npm 镜像（国内）: https://registry.npmmirror.com
+- npm 官方文档: https://docs.npmjs.com/
